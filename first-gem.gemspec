@@ -37,4 +37,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rugged"
   spec.add_dependency "octokit", "~> 4.0"
   spec.add_dependency "travis"
+  spec.add_dependency "puppet", "~> 4.2.2"
 end

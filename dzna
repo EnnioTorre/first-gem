@@ -1,0 +1,78 @@
+import urllib2
+import json
+import sys
+import shelve
+from urllib2 import HTTPError, URLError
+import time
+import argparse
+
+
+def verboseprint(*args):
+   if answer.verbose is not None:
+        # Print each argument separately so caller doesn't need to
+        # stuff everything to be printed into a single string
+        for arg in args:
+           print arg,
+        print
+
+parser=argparse.ArgumentParser(
+    description='''My Description. And what a lovely description it is. ''',
+    epilog="""All's well that ends well.""")
+parser.add_argument('--hostname',dest='hostname', help='hostname',required=True)
+parser.add_argument('--component',dest='component', help='component-name',required=True)
+parser.add_argument('--queue', nargs='*',dest='queue',help='component-queue')
+parser.add_argument('--rate',dest='rate',help='the time interval in secs between two consecutive http calls')
+parser.add_argument('--v', dest='verbose',nargs='?', const=True ,help='verbose output')
+answer=parser.parse_args()
+
+url = 'https://jsonplaceholder.typicode.com/comments?postId=1'
+
+current = time.gmtime()
+
+d = shelve.open('./buffer.data') # open -- file may get suffix added by low-level
+                          # library
+
+if d.has_key('timestamp') and answer.rate is not None and (time.mktime(current)-time.mktime(d['timestamp']))< int(answer.rate) :
+  data = d['response']
+  verboseprint('reading data from buffer')
+else:
+  try:
+    f = urllib2.urlopen(url,timeout=120)
+  except HTTPError as e:
+    print('The server couldn\'t fulfill the request.')
+    print('Error code: ', e.code)
+    sys.exit(e.code)
+  except URLError as e:
+    if hasattr(e, 'reason'):
+      print('We failed to reach a server.')
+      print('Reason: ', e.reason)
+      sys.exit(e.reason)
+    elif hasattr(e, 'code'):
+      print('The server couldn\'t fulfill the request.')
+      print('Error code: ', e.code)
+      sys.exit(e.code)
+
+  data=json.load(f)
+  d['response'] = data
+  d['timestamp'] = current
+  verboseprint('load data to buffer')
+ 
+if answer.component in ['all','ALL']:
+  print(data)
+
+elif answer.queue is not None and answer.component is not None:
+  if answer.queue in ['all','ALL']:
+     print(data[int(answer.component)][q])
+  else:
+     for q in answer.queue:
+       try:
+         print(data[int(answer.component)][q])
+       except KeyError as e:
+         print ('unknown queue name.',q)
+  
+   
+elif answer.component is not None:
+    try:
+      print(data[int(answer.component)])
+    except KeyError as e:
+     print ('unknown queue name.',answer.component)
